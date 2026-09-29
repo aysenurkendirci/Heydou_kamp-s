@@ -8,12 +8,12 @@ namespace hey.dou.Controllers
     {
         private readonly HeydouContext _context;
 
-        public AkademikTakvimController(HeydouContext context) // Veritabanı bağlamını başlatır
+        public AkademikTakvimController(HeydouContext context)
         {
             _context = context;
         }
 
-        public async Task<IActionResult> Index(int? year, int? month) // Takvim ana sayfasını oluşturur ve aylık etkinlikleri listeler
+        public async Task<IActionResult> Index(int? year, int? month)
         {
             var today = DateTime.Today;
             int currentYear = year ?? today.Year;
@@ -39,11 +39,22 @@ namespace hey.dou.Controllers
                 .OrderBy(e => e.BaslangicTarihi)
                 .ToListAsync();
 
+            // Bu hafta ne var?
+            var startOfWeek = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday);
+            var endOfWeek = startOfWeek.AddDays(6);
+
+            ViewBag.BuHaftaEtkinlikler = await _context.AkademikTakvims
+                .Where(e => e.EtkinlikMi &&
+                           e.BaslangicTarihi >= DateOnly.FromDateTime(startOfWeek) &&
+                           e.BaslangicTarihi <= DateOnly.FromDateTime(endOfWeek))
+                .OrderBy(e => e.BaslangicTarihi)
+                .ToListAsync();
+
             return View(events);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetEventsByDate(string date) // Seçilen tarihe özel etkinlikleri dinamik HTML olarak döndürür
+        public async Task<IActionResult> GetEventsByDate(string date)
         {
             if (!DateOnly.TryParse(date, out var selectedDate))
                 return Content("<p class='text-red-500 text-sm'>Geçersiz tarih.</p>", "text/html");
@@ -73,23 +84,42 @@ namespace hey.dou.Controllers
                     ? (ev.Kategori?.Contains("Sınav") == true ? "#f59e0b"
                     : ev.Kategori?.Contains("Tatil") == true ? "#10b981"
                     : ev.Kategori?.Contains("Kayıt") == true ? "#ef4444"
-                    : "#94a3b8")
+                    : ev.EtkinlikMi ? "#8b5cf6" : "#94a3b8")
                     : ev.RenkKodu;
 
+                var detayLink = ev.EtkinlikMi
+                    ? $"<a href='/AkademikTakvim/EtkinlikDetay/{ev.EventId}' class='text-xs text-blue-500 hover:underline mt-1 inline-block'>Detayları Gör →</a>"
+                    : "";
+
                 return $@"
-                    <div class='flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50'>
-                        <div class='h-3 w-3 rounded-full mt-1.5' style='background-color:{renk}'></div>
-                        <div>
-                            <p class='font-semibold text-sm'>{ev.Kategori}</p>
-                            <p class='text-xs text-gray-500'>{ev.Aciklama}</p>
-                            <p class='text-[11px] text-gray-400'>
+                    <div class='flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/20'>
+                        <div class='h-3 w-3 rounded-full mt-1.5 flex-shrink-0' style='background-color:{renk}'></div>
+                        <div class='flex-1'>
+                            <div class='flex items-center gap-2 mb-1'>
+                                <p class='font-semibold text-sm'>{ev.Kategori}</p>
+                                {(ev.EtkinlikMi ? "<span class='text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full'>ETKİNLİK</span>" : "")}
+                            </div>
+                            <p class='text-xs text-gray-600 dark:text-gray-400'>{ev.Aciklama}</p>
+                            {(!string.IsNullOrWhiteSpace(ev.Konum) ? $"<p class='text-[11px] text-gray-400 flex items-center gap-1 mt-1'><span class='material-symbols-rounded' style='font-size:12px'>location_on</span>{ev.Konum}</p>" : "")}
+                            <p class='text-[11px] text-gray-400 mt-1'>
                                 {ev.BaslangicTarihi:dd.MM.yyyy} - {ev.BitisTarihi:dd.MM.yyyy}
                             </p>
+                            {detayLink}
                         </div>
                     </div>";
             }));
 
             return Content(html, "text/html");
+        }
+
+        public async Task<IActionResult> EtkinlikDetay(int id)
+        {
+            var etkinlik = await _context.AkademikTakvims.FindAsync(id);
+
+            if (etkinlik == null)
+                return NotFound();
+
+            return View(etkinlik);
         }
     }
 }

@@ -1,7 +1,9 @@
-﻿namespace hey.dou.Services
+﻿using hey.dou.Models;
+
+namespace hey.dou.Services
 {
     public interface IAiDanismanService
     {
-        Task<string> GetAnswerAsync(string question);
+        Task<AiDanismanResult> GetAnswerAsync(string question);
     }
 }

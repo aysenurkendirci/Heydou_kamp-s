@@ -9,30 +9,26 @@ namespace hey.dou.Controllers
     {
         private readonly IAiDanismanService _aiService;
 
-        public AiDanismanController(IAiDanismanService aiService) // Yapay zeka servisini başlatır
+        public AiDanismanController(IAiDanismanService aiService)
         {
             _aiService = aiService;
         }
 
         [HttpGet]
-        public IActionResult Index() // AI Danışman sayfasını görüntüler ve oturum kontrolü yapar
+        public IActionResult Index()
         {
             if (HttpContext.Session.GetInt32("UserId") == null)
-            {
                 return RedirectToAction("Login", "Account");
-            }
 
             return View(new AiDanismanViewModel());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(AiDanismanViewModel model) // Kullanıcının sorusunu alır ve AI servisinden cevap döndürür
+        public async Task<IActionResult> Index(AiDanismanViewModel model)
         {
             if (HttpContext.Session.GetInt32("UserId") == null)
-            {
                 return RedirectToAction("Login", "Account");
-            }
 
             if (string.IsNullOrWhiteSpace(model.Question))
             {
@@ -42,7 +38,9 @@ namespace hey.dou.Controllers
 
             try
             {
-                model.Answer = await _aiService.GetAnswerAsync(model.Question);
+                var result = await _aiService.GetAnswerAsync(model.Question);
+                model.Answer = result.Answer;
+                model.RelatedPages = GetRelatedPages(result.Intent);
             }
             catch
             {
@@ -50,6 +48,44 @@ namespace hey.dou.Controllers
             }
 
             return View(model);
+        }
+
+        private static List<RelatedPageLink> GetRelatedPages(AiIntent intent)
+        {
+            return intent switch
+            {
+                AiIntent.AcademicCalendar => new()
+                {
+                    new RelatedPageLink { Controller = "AkademikTakvim", Action = "Index", Label = "Akademik Takvim", Icon = "calendar_month" }
+                },
+
+                AiIntent.Cafeteria => new()
+                {
+                    new RelatedPageLink { Controller = "Yemekhane", Action = "Index", Label = "Yemekhane", Icon = "restaurant_menu" }
+                },
+
+                AiIntent.Internships => new()
+                {
+                    new RelatedPageLink { Controller = "Staj", Action = "Index", Label = "Staj İlanları", Icon = "work" }
+                },
+
+                AiIntent.Polls => new()
+                {
+                    new RelatedPageLink { Controller = "Anket", Action = "Index", Label = "Anketler", Icon = "poll" }
+                },
+
+                AiIntent.Events => new()
+                {
+                    new RelatedPageLink { Controller = "Etkinlik", Action = "Index", Label = "Etkinlikler", Icon = "event" }
+                },
+
+                _ => new()
+                {
+                    new RelatedPageLink { Controller = "AkademikTakvim", Action = "Index", Label = "Akademik Takvim", Icon = "calendar_month" },
+                    new RelatedPageLink { Controller = "Yemekhane", Action = "Index", Label = "Yemekhane", Icon = "restaurant_menu" },
+                    new RelatedPageLink { Controller = "Staj", Action = "Index", Label = "Staj İlanları", Icon = "work" }
+                }
+            };
         }
     }
 }

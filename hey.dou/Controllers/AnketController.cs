@@ -34,18 +34,13 @@ namespace hey.dou.Controllers
                 .FirstOrDefaultAsync(m => m.AnketId == id);
         }
 
-        public async Task<IActionResult> Index() // Kullanıcı rolüne göre oylamaya veya anket listesine yönlendirir
+        public async Task<IActionResult> Index() // Herkese tüm anket listesini gösterir
         {
-            if (HttpContext.Session.GetInt32("UserId") == null) return RedirectToAction("Login", "Account");
+            // Giriş yapılmış mı kontrol et
+            if (HttpContext.Session.GetInt32("UserId") == null)
+                return RedirectToAction("Login", "Account");
 
-            var userRole = HttpContext.Session.GetString("Rol");
-            var activePoll = await GetActivePollAsync();
-
-            if (userRole != "KulupBaskani" && activePoll != null)
-            {
-                return RedirectToAction(nameof(Details), new { id = activePoll.AnketId });
-            }
-
+            // Bütün anketleri yeninden eskiye sıralayıp sayfaya gönder
             var anketler = await _context.Ankets.OrderByDescending(a => a.AnketId).ToListAsync();
             return View(anketler);
         }
@@ -75,7 +70,7 @@ namespace hey.dou.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(EtkinlikCreateViewModel model) // Önerilen etkinliği kaydeder ve gerekirse yeni anket başlatır
+        public async Task<IActionResult> Create(EtkinlikCreateViewModel model) // Önerilen etkinliği kaydeder
         {
             var userIdFromSession = HttpContext.Session.GetInt32("UserId");
             if (HttpContext.Session.GetString("Rol") != "KulupBaskani" || userIdFromSession == null)
@@ -84,12 +79,10 @@ namespace hey.dou.Controllers
             string currentUserID = userIdFromSession.Value.ToString();
             if (!ModelState.IsValid) return View(model);
 
-            bool isNewPoll = false;
             var activePoll = await GetActivePollAsync();
 
             if (activePoll == null)
             {
-                isNewPoll = true;
                 activePoll = new Anket
                 {
                     Title = "Haftanın Etkinlik Oylaması",
@@ -113,11 +106,6 @@ namespace hey.dou.Controllers
                 KisaAciklama = model.KisaAciklama
             };
             _context.AnketSecenegis.Add(baskaninOnerisi);
-
-            if (isNewPoll) // Yeni anket ise varsayılan seçenekleri de ekler
-            {
-                _context.AnketSecenegis.AddRange(GetDefaultOptions(activePoll.AnketId));
-            }
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Details), new { id = activePoll.AnketId });
@@ -160,15 +148,6 @@ namespace hey.dou.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Details), new { id = anketId });
-        }
-
-        private List<AnketSecenegi> GetDefaultOptions(int anketId) // Yeni anketler için sistem tarafından oluşturulan hazır seçenekler
-        {
-            return new List<AnketSecenegi>
-            {
-                new AnketSecenegi { AnketId = anketId, SecenekText = "Hafta Sonu Doğa Yürüyüşü", KulupAdi = "Gezi Kulübü", TarihSaat = DateTime.Now.AddDays(3) },
-                new AnketSecenegi { AnketId = anketId, SecenekText = "Kutu Oyunu Gecesi", KulupAdi = "Oyun Kulübü", TarihSaat = DateTime.Now.AddDays(2) }
-            };
         }
     }
 }

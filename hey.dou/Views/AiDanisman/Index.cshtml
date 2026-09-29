@@ -59,31 +59,22 @@
                 </div>
             </div>
 
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <p class="text-xs uppercase tracking-wide text-gray-400 mb-2">İlgili sayfalar</p>
-                <div class="flex flex-wrap gap-2 text-sm">
-                    <a asp-controller="AkademikTakvim" asp-action="Index"
-                       class="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <span class="material-symbols-rounded text-xs mr-1">calendar_month</span>
-                        Akademik Takvim
-                    </a>
-                    <a asp-controller="Yemekhane" asp-action="Index"
-                       class="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <span class="material-symbols-rounded text-xs mr-1">restaurant_menu</span>
-                        Yemekhane
-                    </a>
-                    <a asp-controller="Anket" asp-action="Index"
-                       class="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <span class="material-symbols-rounded text-xs mr-1">poll</span>
-                        Anketler
-                    </a>
-                    <a asp-controller="Etkinlik" asp-action="Index"
-                       class="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <span class="material-symbols-rounded text-xs mr-1">event</span>
-                        Etkinlikler
-                    </a>
+            @if (Model.RelatedPages != null && Model.RelatedPages.Any())
+            {
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <p class="text-xs uppercase tracking-wide text-gray-400 mb-2">İlgili sayfalar</p>
+                    <div class="flex flex-wrap gap-2 text-sm">
+                        @foreach (var p in Model.RelatedPages)
+                        {
+                            <a asp-controller="@p.Controller" asp-action="@p.Action"
+                               class="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <span class="material-symbols-rounded text-xs mr-1">@p.Icon</span>
+                                @p.Label
+                            </a>
+                        }
+                    </div>
                 </div>
-            </div>
+            }
         </div>
     }
 </div>

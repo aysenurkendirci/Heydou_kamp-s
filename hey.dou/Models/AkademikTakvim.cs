@@ -16,4 +16,13 @@ public partial class AkademikTakvim
     public string? Kategori { get; set; }
 
     public string? RenkKodu { get; set; }
+
+    // Yeni alanlar
+    public string? Konum { get; set; }
+
+    public string? Organizator { get; set; }
+
+    public bool EtkinlikMi { get; set; }
+
+    public string? DetayAciklama { get; set; }
 }

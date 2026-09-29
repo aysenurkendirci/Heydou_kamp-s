@@ -223,7 +223,16 @@
                     </div>
                     <div class="flex justify-between items-start">
                         <h3 class="text-xl font-bold text-slate-800 dark:text-white mb-2 group-hover:text-primary transition-colors">Anketler</h3>
-                        <span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg">Aktif</span>
+
+                        @if (ViewBag.AktifAnketVarMi == true)
+                        {
+                            <span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg">Aktif</span>
+                        }
+                        else
+                        {
+                            <span class="px-2 py-1 text-xs font-bold bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-slate-400 border border-gray-200 dark:border-slate-700 rounded-lg">Oylama Yok</span>
+                        }
+
                     </div>
                     <p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
                         Aktif anketlere katılın, kampüs yaşamına ve kulüp etkinliklerine yön verin.

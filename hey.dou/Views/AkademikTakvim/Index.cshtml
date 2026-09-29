@@ -4,12 +4,12 @@
 
     int currentYear = (int)ViewBag.CurrentYear;
     int currentMonth = (int)ViewBag.CurrentMonth;
+    var buHaftaEtkinlikler = ViewBag.BuHaftaEtkinlikler as List<hey.dou.Models.AkademikTakvim> ?? new List<hey.dou.Models.AkademikTakvim>();
 
     var today = DateTime.Today;
     var firstDay = new DateTime(currentYear, currentMonth, 1);
     var daysInMonth = DateTime.DaysInMonth(currentYear, currentMonth);
 
-    // pazartesiyle başlasın
     int padding = ((int)firstDay.DayOfWeek + 6) % 7;
 
     var monthEvents = Model ?? new List<hey.dou.Models.AkademikTakvim>();
@@ -28,10 +28,56 @@
         if (!string.IsNullOrWhiteSpace(ev.Kategori))
         {
             if (ev.Kategori.Contains("Sınav")) return "#f59e0b";
-            if (ev.Kategori.Contains("Tatil")) return "#10b981";
-            if (ev.Kategori.Contains("Kayıt")) return "#ef4444";
+            if (ev.Kategori.Contains("Tatil") || ev.Kategori.Contains("Bayram")) return "#10b981";
+            if (ev.Kategori.Contains("Kayıt") || ev.Kategori.Contains("Ekle-Sil")) return "#ef4444";
+            if (ev.Kategori.Contains("Dönem")) return "#3b82f6";
         }
+        if (ev.EtkinlikMi) return "#8b5cf6";
         return "#94a3b8";
+    }
+
+    string GetKisaAd(string kategori, DateOnly eventStart, DateOnly eventEnd, DateOnly currentDay)
+    {
+        if (string.IsNullOrWhiteSpace(kategori)) return "";
+
+        bool isStartDay = eventStart == currentDay;
+        bool isEndDay = eventEnd == currentDay;
+        bool isSingleDay = eventStart == eventEnd;
+
+        // ÇOK GÜNLÜ ETKİNLİKLER - Sadece başlangıç gününde göster
+        if (!isSingleDay && !isStartDay)
+        {
+            // Bitiş günü için özel durumlar
+            if (isEndDay && (kategori.Contains("Dönem Sonu") || kategori.Contains("Bitiş")))
+            {
+                return "Bitiş";
+            }
+
+            // Diğer ara günlerde hiçbir şey gösterme
+            return "";
+        }
+
+        // KISALTMALAR (sadece başlangıç gününde)
+        if (kategori.Contains("Vize Sınavları")) return "Vize";
+        if (kategori.Contains("Final Sınavları")) return "Final";
+        if (kategori.Contains("Bütünleme")) return "Büt";
+        if (kategori.Contains("Ders Kayıt") && !kategori.Contains("Ekle")) return "Kayıt";
+        if (kategori.Contains("Ekle-Sil")) return "Ekle/Sil";
+        if (kategori.Contains("Dönem Başlangıcı")) return "Başlangıç";
+        if (kategori.Contains("Dönem Sonu")) return "Bitiş";
+        if (kategori.Contains("Cumhuriyet")) return "29 Ekim";
+        if (kategori.Contains("Ramazan")) return "Bayram";
+        if (kategori.Contains("23 Nisan")) return "23 Nisan";
+        if (kategori.Contains("İşçi")) return "1 Mayıs";
+        if (kategori.Contains("Gençlik")) return "19 Mayıs";
+        if (kategori.Contains("Yaz Okulu Kayıt")) return "Yaz Kayıt";
+        if (kategori.Contains("Yaz Okulu")) return "Yaz Okulu";
+
+        // Etkinlikler - daha kısa göster
+        if (kategori.Length > 15)
+            return kategori.Substring(0, 12) + "...";
+
+        return kategori.Length > 12 ? kategori.Substring(0, 10) + "..." : kategori;
     }
 
     string prevUrl = Url.Action("Index", "AkademikTakvim", new { year = (int)ViewBag.PrevYear, month = (int)ViewBag.PrevMonth })!;
@@ -41,7 +87,7 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h2 class="text-3xl md:text-4xl font-extrabold">Akademik Takvim</h2>
-        <p class="text-sm text-slate-500 mt-1">Sınav, tatil ve kayıt dönemlerini buradan takip edebilirsin.</p>
+        <p class="text-sm text-slate-500 mt-1">Sınav, tatil, kayıt dönemleri ve etkinlikleri buradan takip edebilirsin.</p>
     </div>
 
     <button type="button"
@@ -55,42 +101,68 @@
 <div class="flex flex-col lg:flex-row gap-6">
     <!-- SOL PANEL -->
     <aside class="w-full lg:w-1/4 xl:w-1/5 space-y-6">
+        <!-- FİLTRELER -->
         <div class="bg-white dark:bg-card-dark p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
             <p class="text-sm font-semibold mb-3">Filtrele</p>
             <div class="space-y-2 text-sm">
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="takvimFilter" value="ALL" checked />
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="takvimFilter" value="ALL" checked class="cursor-pointer" />
                     <span>Tümü</span>
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="takvimFilter" value="Sınav" />
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="takvimFilter" value="Sınav" class="cursor-pointer" />
                     <span>Sınavlar</span>
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="takvimFilter" value="Tatil" />
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="takvimFilter" value="Tatil" class="cursor-pointer" />
                     <span>Tatiller</span>
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="radio" name="takvimFilter" value="Kayıt" />
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="takvimFilter" value="Kayıt" class="cursor-pointer" />
                     <span>Kayıt Dönemleri</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="takvimFilter" value="Dönem" class="cursor-pointer" />
+                    <span>Dönem Tarihleri</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="takvimFilter" value="Etkinlik" class="cursor-pointer" />
+                    <span>Etkinlikler</span>
                 </label>
             </div>
         </div>
 
-        <div class="bg-white dark:bg-card-dark p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-            <p class="text-sm font-semibold mb-3">Renk Kodu</p>
-            <ul class="space-y-2 text-sm">
-                <li class="flex items-center gap-2">
-                    <span class="h-3 w-3 rounded-full bg-[#f59e0b]"></span> Sınavlar
-                </li>
-                <li class="flex items-center gap-2">
-                    <span class="h-3 w-3 rounded-full bg-[#10b981]"></span> Tatiller
-                </li>
-                <li class="flex items-center gap-2">
-                    <span class="h-3 w-3 rounded-full bg-[#ef4444]"></span> Kayıt Dönemleri
-                </li>
-            </ul>
-        </div>
+        <!-- BU HAFTA NE VAR -->
+        @if (buHaftaEtkinlikler.Any())
+        {
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-2xl border border-purple-200 dark:border-purple-700 shadow-sm">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="material-symbols-rounded text-purple-600 dark:text-purple-400">event_upcoming</span>
+                    <p class="text-sm font-semibold text-purple-900 dark:text-purple-200">Bu Hafta Ne Var?</p>
+                </div>
+                <div class="space-y-3">
+                    @foreach (var etkinlik in buHaftaEtkinlikler.Take(3))
+                    {
+                        <a href="@Url.Action("EtkinlikDetay", new { id = etkinlik.EventId })"
+                           class="block p-3 bg-white/60 dark:bg-slate-800/40 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition border border-purple-100 dark:border-purple-800">
+                            <p class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-1">@etkinlik.Kategori</p>
+                            <p class="text-[11px] text-gray-600 dark:text-gray-400 line-clamp-2">@etkinlik.Aciklama</p>
+                            <div class="flex items-center justify-between mt-2">
+                                <p class="text-[10px] text-gray-500">@etkinlik.BaslangicTarihi.ToString("dd MMM")</p>
+                                @if (!string.IsNullOrWhiteSpace(etkinlik.Organizator))
+                                {
+                                    <span class="text-[9px] bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded-full">@etkinlik.Organizator</span>
+                                }
+                            </div>
+                        </a>
+                    }
+                </div>
+                @if (buHaftaEtkinlikler.Count > 3)
+                {
+                    <p class="text-center text-[11px] text-purple-600 dark:text-purple-400 mt-3">+@(buHaftaEtkinlikler.Count - 3) etkinlik daha</p>
+                }
+            </div>
+        }
     </aside>
 
     <!-- SAĞ TARAF -->
@@ -121,7 +193,7 @@
             <div class="grid grid-cols-7 gap-2 text-center">
                 @for (int i = 0; i < padding; i++)
                 {
-                    <div class="h-16 rounded-xl"></div>
+                    <div class="h-20 rounded-xl"></div>
                 }
 
                 @for (int day = 1; day <= daysInMonth; day++)
@@ -130,24 +202,55 @@
 
                     var eventsOfDay = monthEvents
                     .Where(e => e.BaslangicTarihi <= dayDate && e.BitisTarihi >= dayDate)
+                    .OrderByDescending(e => e.BaslangicTarihi == dayDate)
+                    .ThenBy(e => e.EtkinlikMi ? 0 : 1)
                     .ToList();
 
                     bool isToday = (day == today.Day && currentMonth == today.Month && currentYear == today.Year);
 
                     <button type="button"
                             data-date="@dayDate.ToString("yyyy-MM-dd")"
-                            class="day-cell h-16 w-full rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/30 flex flex-col items-center py-1 gap-1 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition @(isToday ? "ring-2 ring-orange-400" : "")">
+                            class="day-cell h-20 w-full rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/30 flex flex-col items-center py-1.5 gap-0.5 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 transition @(isToday ? "ring-2 ring-orange-400" : "")">
                         <span class="text-sm font-semibold @(isToday ? "text-orange-600" : "text-slate-700 dark:text-slate-200")">
                             @day
                         </span>
 
-                        <div class="flex gap-1 flex-wrap justify-center">
-                            @foreach (var ev in eventsOfDay.Take(3))
-                            {
-                                var c = GetColor(ev);
-                                <span class="h-2 w-2 rounded-full" style="background-color:@c"></span>
-                            }
-                        </div>
+                        @if (eventsOfDay.Any())
+                        {
+                            <div class="flex flex-col items-center gap-0.5 w-full px-1">
+                                @{
+                                    var displayedEvents = 0;
+                                    foreach (var ev in eventsOfDay)
+                                    {
+                                        if (displayedEvents >= 2) break;
+
+                                        var kisaAd = GetKisaAd(ev.Kategori ?? "", ev.BaslangicTarihi, ev.BitisTarihi, dayDate);
+
+                                        // Boş ise gösterme
+                                        if (string.IsNullOrEmpty(kisaAd))
+                                        {
+                                            continue;
+                                        }
+
+                                        var renk = GetColor(ev);
+
+                                        <div class="text-[9px] font-medium px-1 py-0.5 rounded truncate w-full text-center"
+                                             style="background-color:@renk; color:white;"
+                                             title="@ev.Kategori (@ev.BaslangicTarihi.ToString("dd.MM") - @ev.BitisTarihi.ToString("dd.MM"))">
+                                            @kisaAd
+                                        </div>
+
+                                        displayedEvents++;
+                                    }
+
+                                    var remainingCount = eventsOfDay.Count(e => !string.IsNullOrEmpty(GetKisaAd(e.Kategori ?? "", e.BaslangicTarihi, e.BitisTarihi, dayDate))) - displayedEvents;
+                                    if (remainingCount > 0)
+                                    {
+                                        <span class="text-[8px] text-gray-500">+@remainingCount</span>
+                                    }
+                                }
+                            </div>
+                        }
                     </button>
                 }
             </div>
@@ -199,7 +302,13 @@
                     items.forEach(item => {
                         const title = item.querySelector("p.font-semibold");
                         const text = title ? title.textContent : "";
-                        if (!text.includes(filter)) item.remove();
+                        const isEtkinlik = item.querySelector("span.bg-purple-100");
+
+                        if (filter === "Etkinlik" && !isEtkinlik) {
+                            item.remove();
+                        } else if (filter !== "Etkinlik" && !text.includes(filter)) {
+                            item.remove();
+                        }
                     });
 
                     html = temp.innerHTML.trim();
