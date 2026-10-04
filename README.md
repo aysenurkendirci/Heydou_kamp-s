@@ -14,7 +14,7 @@ The platform includes:
 
 ## 💡 My Contribution
 
-- 🎨 Focused on **frontend development**
+- 🎨 Focused on **frontend-backend development**
 - 🔗 Worked on **frontend-backend integration**
 - 🤖 Contributed to **AI-supported features**
 - ⚙️ Helped ensure **data consistency across modules**
